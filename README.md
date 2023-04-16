@@ -1,10 +1,10 @@
 # Summary
 It is a tool for save all files in HAR.
 
-The save path same as request path.
-can format js, css, html, json file via beautify property.
-can filter and save some urls as a config of node router
-provide some callback funtion, you can custom by your ideas
+- The save path same as request path.
+- can format js, css, html, json file via beautify property.
+- can filter and save some urls as a config of node router
+- provide some callback funtion, you can custom by your ideas
 
 # Installation
 
