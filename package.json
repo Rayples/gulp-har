@@ -1,0 +1,21 @@
+{
+  "name": "gulp-har",
+  "version": "1.0.2",
+  "description": "save all files in har with beautify",
+  "main": "index.js",
+  "scripts": {
+    "test": "gulp"
+  },
+  "keywords": [
+    "gulp",
+    "har"
+  ],
+  "author": "rayple",
+  "license": "ISC",
+  "dependencies": {
+    "gulp": "^4.0.2",
+    "js-beautify": "^1.14.7",
+    "mime-db": "^1.52.0",
+    "vinyl": "^3.0.0"
+  }
+}
