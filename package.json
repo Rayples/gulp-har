@@ -1,8 +1,12 @@
 {
   "name": "gulp-har",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "save all files in har with beautify",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Rayples/gulp-har.git"
+  },
   "scripts": {
     "test": "gulp"
   },
@@ -11,7 +15,7 @@
     "har"
   ],
   "author": "rayple",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
     "gulp": "^4.0.2",
     "js-beautify": "^1.14.7",

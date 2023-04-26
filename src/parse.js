@@ -1,3 +1,4 @@
+
 const fs = require('fs');
 const path = require("path");
 const mime_db = require('mime-db');
@@ -15,13 +16,12 @@ const apiOptions = {
     dest: ".",
     fileName: "response.config.json",
     urls: {},
-    currentUrlPath: "",
-    addAPI: function (filePath) {
-        const _cup = this.urls[this.currentUrlPath];
+    addAPI: function (filePath, urlPath) {
+        const _cup = this.urls[urlPath];
         if (_cup) {
             var _files = _cup.files;
-            filePath = filePath.replace(/\\/g, "/").replace(/(\.json)/, _files.length + "$1");
-            _files.push(filePath)
+            filePath = filePath.replace(/\\/g, "/");
+            _files.push(filePath);
         }
         return filePath;
     },
@@ -36,7 +36,6 @@ const apiOptions = {
         }
 
         if (_result) {
-            this.currentUrlPath = urlPath;
             this.urls[urlPath] = this.urls[urlPath] ? this.urls[urlPath] : {
                 files: []
             }
@@ -49,13 +48,14 @@ const apiOptions = {
 const defaultOptions = {
     beautify: false,
     filter: "",
+    urls: {},
     handler: function (extname, obj, callback, filePath) {
         switch (extname) {
             case ".json":
-                if(Buffer.isBuffer(obj)){
+                if (Buffer.isBuffer(obj)) {
                     obj = obj.toString();
                 }
-                if(this.beautify && typeof obj === "string"){
+                if (this.beautify && typeof obj === "string") {
                     obj = js_beautify(obj);
                 }
                 break;
@@ -63,26 +63,26 @@ const defaultOptions = {
                 obj = Buffer.from(obj, "base64");
                 break;
             case ".html":
-                if(Buffer.isBuffer(obj)){
+                if (Buffer.isBuffer(obj)) {
                     obj = obj.toString();
                 }
-                if(this.beautify && typeof obj === "string"){
+                if (this.beautify && typeof obj === "string") {
                     obj = html_beautify(obj);
                 }
                 break;
             case ".js":
-                if(Buffer.isBuffer(obj)){
+                if (Buffer.isBuffer(obj)) {
                     obj = obj.toString();
                 }
-                if(this.beautify && typeof obj === "string"){
+                if (this.beautify && typeof obj === "string") {
                     obj = js_beautify(obj);
                 }
                 break;
             case ".css":
-                if(Buffer.isBuffer(obj)){
+                if (Buffer.isBuffer(obj)) {
                     obj = obj.toString();
                 }
-                if(this.beautify && typeof obj === "string"){
+                if (this.beautify && typeof obj === "string") {
                     obj = css_beautify(obj);
                 }
                 break;
@@ -122,6 +122,7 @@ module.exports = (options) => {
                 m.header_path = header_path.value
                     .replace(/\?.*/g, "")
                     .replace(/[\:*"<>|]/g, "_");
+                this._tallyUrl(m.header_path);
                 m.filePath = this._createFileName(m.header_path, m.response.content.mimeType);
                 return m
             })
@@ -164,7 +165,7 @@ module.exports = (options) => {
                     const _result = _apiOptions.callback.call(this, _filePath, _options, m);
                     _filePath = _result ? _result : _filePath;
                 }
-                m.fileSavePath = _apiOptions.addAPI(_filePath);
+                m.fileSavePath = _apiOptions.addAPI(_filePath, m.header_path);
             });
             let _data = Object.entries(_apiOptions.urls).map(([key, val]) => {
                 var _item = {
@@ -208,21 +209,30 @@ module.exports = (options) => {
         },
         _createFileName: function (urlPath, mimeType) {
             let fileInfo = path.parse(urlPath);
+            let _dir = fileInfo.dir, _name = fileInfo.name, _ext = fileInfo.ext;
             if (!fileInfo.ext) {
-                let _ext = _mimeTypeOptions[mimeType];
+                _ext = _mimeTypeOptions[mimeType];
                 if (!_ext) {
                     _ext = mime_db[mimeType] && mime_db[mimeType].extensions ? "." + mime_db[mimeType].extensions[0] : undefined;
                 }
                 if (!_ext) {
                     _ext = DEFAULT_MIME_TYPE;
                 }
-                urlPath = path.join(urlPath, fileInfo.base + _ext);
+                _name = path.join(_name, _name);
             }
+            if (_options.urls[urlPath].length > 0) {
+                _name += `_${_options.urls[urlPath].length}`;
+            }
+            urlPath = path.join(_dir, _name + _ext);
             if (typeof _mimeTypeOptions.callback === "function") {
                 const _result = _mimeTypeOptions.callback.call(this, urlPath, mimeType, _options);
                 urlPath = _result ? _result : urlPath;
             }
             return urlPath;
+        },
+        _tallyUrl: function (urlPath) {
+            _options.urls[urlPath] = Object.assign({ length: -1 }, _options.urls[urlPath]);
+            _options.urls[urlPath].length++;
         },
         _getDeepValue: function (obj, key) {
             return key.split(".")

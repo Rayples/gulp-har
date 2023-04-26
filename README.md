@@ -1,10 +1,3 @@
-# Summary
-It is a tool for save all files in HAR.
-
-- The save path same as request path.
-- can format js, css, html, json file via beautify property.
-- can filter and save some urls as a config of node router
-- provide some callback funtion, you can custom by your ideas
 
 # Installation
 
@@ -58,32 +51,46 @@ gulp.task('parse', (done) => {
 gulp.task("default", gulp.series("parse"));
 ```
 
+```js
+const saveHar = require('gulp-har');
+const gulp = require('gulp');
+const path = require("path");
+
+gulp.task('parse', (done) => {
+    gulp.src("./**/*.har")
+        .pipe(saveHar({
+            beautify: true
+        }))
+        .pipe(gulp.dest("./dest"));
+    done();
+});
+
+gulp.task("default", gulp.series("parse"));
+```
+
 **defaults per options**
 ```js
 const DEFAULT_MIME_TYPE = ".txt";
 
 const mimeTypeOptions = {
     // add some custom mime type that is out of mime-db
-    "application/json": ".json",
-    "text/html": ".html",
-    "application/x-javascript": ".js",
-    "application/javascript": ".js",
-    "image/gif": ".gif",
-    "callback": function (urlPath, mimeType) {
-        // can change url path, usually we only change extname.
-         return urlPath;
-    }
+    // "application/json": ".json",
+    // "text/html": ".html",
+    // "application/x-javascript": ".js",
+    // "application/javascript": ".js",
+    // "image/gif": ".gif",
+    "callback": function | undefined
 };
 
 const apiOptions = {
-    filter: string | function, // if filter has value, will save response.config.json
+    filter: string | function | undefined, // if filter has value, will save response.config.json
     dest: string, // default "."
     fileName: "response.config.json"
 }
 
 const defaultOptions = {
-    beautify: boolean,
-    filter: string | function, // filter http record
-    saveCallBack: function, // can change file content and path for specify file type
+    beautify: boolean | undefined, // default false
+    filter: string | function | undefined, // filter http record
+    saveCallBack: function | undefined, // can change file content and path for specify file type
 }
 ```
