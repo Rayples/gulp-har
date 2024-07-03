@@ -1,6 +1,6 @@
 import { deep_clone, get_deep_value, set_deep_value, isArray, isString, isFunction, isBoolean, isObject, isRegExp } from "./index.mjs";
 
-export const _parse_path = ["api.saved", "api.filter", "query_string", "content_text", "override", "beautify", "remove_links", "filter_request", "filter_response"];
+export const _parse_path = ["api.saved", "api.filter", "query_string", "content_text", "override", "beautify", "remove_links", "filter_request", "filter_response", "default_ext"];
 
 export function parse_options(_default_options) {
     return (options) => {

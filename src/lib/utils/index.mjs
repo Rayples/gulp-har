@@ -1,6 +1,7 @@
 import { parse as path_parse } from "node:path";
 import mime_db from "mime-db";
 import prettier from "@prettier/sync";
+import md5 from "md5";
 
 const _http_link = /(http(s)?:)?\/\/(\w+\.)+(com|net|cn|comcn|netcn|org|orgcn|gov|edu|cc|travel|tv|fm|museum|int|areo|post|info|rec|asia|ac|mil|name|Wang|biz|mobi)/g;
 
@@ -17,16 +18,26 @@ export function get_path(entrie, options) {
 
     let _path = entrie.request.url;
     const _URL = new URL(_path);
-    const _path_info = path_parse(_URL.pathname);
+
+    // 解决中文路径乱码问题
+    let _path_name = decodeURI(_URL.pathname);
+    const _path_info = path_parse(_path_name);
 
     if (options.query_string.omit(_path_info.ext, _path_info, entrie)) {
-        _path = _URL.pathname;
+        _path = _path_name;
     } else if (options.query_string.to_path(_path_info.ext, _path_info, entrie)) {
-        _path_info.dir = `${_path_info.dir}${entrie.request.queryString.reduce((acc, { name, value }) => `${acc}/${name}-${value}`, "")}`
+
+        let _queryString = entrie.request.queryString;
+        let _query_string_path = decodeURI(_queryString.reduce((acc, { name, value }) => `${acc}/${name}-${value}`, ""));
+        if(_queryString.length > 10 || _query_string_path.length > 150) {
+            // 解决存储路径过长问题
+            _query_string_path = `/${md5(_query_string_path)}`;
+        }
+        _path_info.dir = `${_path_info.dir}${_query_string_path}`;
         _path = `${_path_info.dir}/${_path_info.base}`;
     }
     return {
-        pathname: _URL.pathname,
+        pathname: _path_name,
         path: _path,
         dir: _path_info.dir,
         file_full_name: _path_info.base,
