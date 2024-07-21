@@ -72,6 +72,7 @@ export default options => {
         let _passed_request_list = [];
         _contents?.log?.entries?.forEach((entrie) => {
             const request = {
+                harFileName: file.basename,
                 entrie,
                 options: _options,
                 handle_data: {

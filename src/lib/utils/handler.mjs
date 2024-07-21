@@ -51,7 +51,7 @@ export function verify_path(request) {
 
     if(isEmpty(handle_data.file_ext)) {
         handle_data.file_ext = `.${get_extension(_mime_type, options.mimeType, options.output.defaultExt(request, "entrie.response.content.mimeType"))}`;
-        handle_data.file_full_name = `${handle_data.file_name}.${handle_data.file_ext}`;
+        handle_data.file_full_name = `${handle_data.file_name}${handle_data.file_ext}`;
         handle_data.file_path = `${handle_data.file_dir}/${handle_data.file_full_name}`;
     }
 
@@ -119,15 +119,23 @@ export function filter_api_request(request) {
 
 export function format_content(request) {
 
-    let {entrie, options, handle_data} = request;
-
+    let {entrie, options, harFileName, handle_data} = request;
+    const { inferredParser } = prettier.getFileInfo(handle_data.file_path);
     let _content_text = entrie.response.content?.text ?? "";
-    if(options.response.content.removeHostname(request, "handle_data.file_ext", "boolean") === true) {
-        _content_text = _content_text.replace(_http_link, "");
-    }
 
-    if(options.beautify(request, "handle_data.file_ext", "boolean")) {
-        _content_text = contnet_format_handler(handle_data.file_path, _content_text);
+    if(inferredParser){
+        if(options.response.content.removeHostname(request, "handle_data.file_ext", "boolean") === true) {
+            _content_text = _content_text.replace(_http_link, "");
+        }
+
+        if(options.beautify(request, "handle_data.file_ext", "boolean")) {
+            _content_text = contnet_format_handler({
+                harFileName,
+                file_path: handle_data.file_path,
+                content_text: _content_text,
+                inferredParser
+            });
+        }
     }
 
     let _file_encoding = entrie.response.content.encoding;
@@ -141,15 +149,15 @@ export function format_content(request) {
     return request;
 }
 
-export function contnet_format_handler(file_path, content_text) {
-    const { inferredParser } = prettier.getFileInfo(file_path);
+export function contnet_format_handler(params) {
+    let {harFileName, file_path, content_text, inferredParser} = params;
     let _content_text = content_text;
-    if(inferredParser){
-        try {
-            _content_text = prettier.format(content_text, { tabWidth: 4, useTabs: false, parser: inferredParser });
-        } catch (error) {
-            console.error("format error:", file_path);
-        }
+    try {
+        _content_text = prettier.format(_content_text, { tabWidth: 4, useTabs: false, parser: inferredParser });
+    } catch (error) {
+        let _message = error?.message ?? "";
+        _message = _message.length < 100 ? _message : `${_message.substring(0, 100)}...`;
+        console.error(`[ERROR]:[FORMAT ERROR]:${harFileName} -- [PATH]: ${file_path} -- MESSAGE: ${_message}`);
     }
     return _content_text;
 }
