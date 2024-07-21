@@ -1,75 +1,91 @@
-import { deep_clone, get_deep_value, set_deep_value, isArray, isString, isFunction, isBoolean, isObject, isRegExp } from "./index.mjs";
+import { deep_clone, isArray, isString, isFunction, isBoolean, isRegExp, set_deep_value, flatten_object, to_regex, get_deep_value } from "./tools.mjs";
 
-export const _parse_path = ["api.saved", "api.filter", "query_string", "content_text", "override", "beautify", "remove_links", "filter_request", "filter_response", "default_ext"];
+export const _to_extend = [
+    "override",
+    "beautify",
+    "request.filter.*",
+    "request.queryString.*",
+    "response.filter.*",
+    "response.content.removeHostname",
+    "apiInfo.filter",
+    "output.defaultExt"
+]
 
-export function parse_options(_default_options) {
-    return (options) => {
+const _to_flatten = [
+    "request.filter",
+    "response.filter"
+]
 
-        options = Object.assign({}, deep_clone(_default_options), deep_clone(options));
-        const _flatten_options = _flatten_object(options);
-        Object.entries(_flatten_options).forEach(([_path, _value]) => {
-            if (_parse_path.find((m) => _path.startsWith(m))){
-                set_deep_value(options, _path, _handle_option(_value))
-            }
-        })
-        return options
-    }
+const _to_extend_regex = to_regex(_to_extend);
+
+export function merge_options(_default_options, options) {
+    let _options = parse_options(deep_clone(_default_options), options)
+
+    _to_flatten.forEach((path) => {
+        let _value = get_deep_value(_options, path);
+        set_deep_value(_options, path, flatten_object(_value));
+    })
+
+    return _options;
 }
 
-export const _flatten_object = (target) => {
-    const output = {};
-    function step(object, parent_path) {
-        Object.entries(object).forEach(([key, value]) => {
-            const _path = parent_path ? `${parent_path}.${key}` : key;
-            if (isObject(value) && Object.keys(value).length) {
-                return step(value, _path)
-            }
-            output[_path] = value
+export function parse_options(_default_options, options) {
+
+    const _flatten_options = flatten_object(options);
+    const _flatten_default_options = flatten_object(_default_options);
+
+    let _result = {};
+    Object
+        .entries({
+            ..._flatten_default_options,
+            ..._flatten_options
         })
-    }
-    step(target)
-    return output
-};
+        .forEach(([_path, _value]) => {
+            if(match_boolean_path(_path)) {
+                _value = _handle_option(_value);
+            }
+            set_deep_value(_result, _path, _value)
+        });
+    return _result;
+}
+
+export function match_boolean_path(target) {
+    let passed = _to_extend_regex.some((m) => m.test(target));
+   return passed;
+}
 
 export function _handle_option(option) {
     let _option = option;
-    let _result = (key) => {
-        return key;
-    }
+    let _cb = (object, defaultKeyPath, type = "value", defaultVal) => {
+        const _value = get_deep_value(object, defaultKeyPath) ?? defaultVal;
+        let _result = null;
 
-    if (isBoolean(_option)) {
-        _result = (key) => {
-            return Boolean(_option)
-        };
-    }
-    else if (isArray(_option)) {
-        _result = (key) => {
-            return _option.some((_p) => {
+        if (isBoolean(_option)) {
+            _result = _option
+        }
+        if (isArray(_option)) {
+            _result = _option.some((_p) => {
                 const is_exclusion = _p.startsWith("!");
-                return is_exclusion ? key !== _p.slice(1) : key === _p;
+                return is_exclusion ? _value !== _p.slice(1) : _value === _p;
             });
-        };
+        }
+        if (isString(_option)) {
+            if(type == "boolean") {
+                const is_exclusion = _option.startsWith("!");
+                _result = is_exclusion ? _value !== _option.slice(1) : _value === _option;
+            }
+            if(type == "value") {
+                _result = _option;
+            }
+        }
+        if (isFunction(_option)) {
+            _result = _option(object, _value, type);
+        }
+        if (isRegExp(_option)) {
+            _result = _option.test(_value);
+        }
+        return _result;
     }
-    else if (isString(_option)) {
-        const is_exclusion = _option.startsWith("!");
-        _result = (key) => {
-            return is_exclusion ? key !== _option.slice(1) : key === _option;
-        };
-    }
-    else if (isFunction(_option)) {
-        _result = (key, handle_data, entrie) => {
-            return Boolean(_option(key, handle_data, entrie));
-        };
-    }
-    else if (isObject(_option)) {
-        _result = (key) => {
-            return Boolean(_option[key]);
-        };
-    }
-    else if (isRegExp(_option)) {
-        _result = (key) => {
-            return _option.test(key);
-        };
-    }
-    return _result;
+    return _cb;
 }
+

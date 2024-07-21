@@ -14,10 +14,18 @@ import gulp from 'gulp';
 gulp.task('parse', (done) => {
     gulp.src("./har/*.har")
         .pipe(gulp_har({
-            beautify: ["!.css"],
-            override: true,
-            filter_request: {
-                url: (url) => /^(?!(.*?blob\/master)).*/.test(url),
+            beautify: ["!.json"],
+            override: ["!.json"],
+            request: {
+                filter: {
+                    url: (request, url) => /^(?!(.*?blob\/master)).*/.test(url),
+                }
+            },
+            response: {
+                filter: {
+                    "status": /^[^45]\d+/,
+                    "content.text": (request, text) => !!text && !!text.trim()
+                }
             }
         }))
         .pipe(gulp.dest("./dest"));
@@ -31,86 +39,39 @@ gulp.task("default", gulp.series("parse"));
 **defaults per options**
 ```js
 let options = {
-    query_string: {
-        omit: false,
-        to_path: true
-    },
-    log: {
-        level: "debug"
-    },
-    content_text: {
-        skip_empty: true
-    },
-    mime_type: {
+    override: true,
+    beautify: true,
+    mimeType: {
         "application/x-javascript": {
-            "source": "iana",
-            "charset": "UTF-8",
-            "compressible": true,
             "extensions": ["js", "mjs"]
         }
     },
-    api: {
-        saved: true,
-        file_name: 'apis.json',
-        filter: /(REST|api)\//
+    request: {
+        filter: {
+        },
+        queryString: {
+            remove: true,
+            toPath: true
+        }
     },
-    default_ext: '.txt',
-    /**
-     * 可能的值
-     *      override: true,
-     *      override: ".js",
-     *      override: "!.js",
-     *      override: /.(js|html)$/,
-     *      override: [".js", ".html"],
-     *      override: (ext, handle_data, entrie) => true,
-     * @returns {boolean}
-     */
-    override: true,
-    /**
-     * 可能的值
-     *      beautify: true,
-     *      beautify: ".js",
-     *      beautify: "!js",
-     *      beautify: /.(js|html)$/,
-     *      beautify: [".js", ".html"],
-     *      beautify: (ext, handle_data, entrie) => true,
-     * @returns {boolean}
-     */
-    beautify: true,
-    /**
-     * 可能的值
-     *      remove_links: true,
-     *      remove_links: ".js",
-     *      remove_links: "!js",
-     *      remove_links: /.(js|html)$/,
-     *      remove_links: [".js", ".html"],
-     *      remove_links: (ext, handle_data, entrie) => true,
-     * @returns {boolean}
-     */
-    remove_links: true,
-    /**
-     * 可能的值
-     *      filter_request: {
-     *          method: "GET",
-     *          method: "!GET",
-     *          method: /GET|POST/,
-     *          method: ["GET", "POST"],
-     *          method: (method_value) => true,
-     *      }
-     * @returns {boolean}
-     */
-    filter_request: {},
-    /**
-     * 可能的值
-     *      filter_response: {
-     *          status: "200",
-     *          status: "!500",
-     *          status: /200/,
-     *          status: ["200", "201"],
-     *          status: (status_value) => true,
-     *      }
-     * @returns {boolean}
-     */
-    filter_response: {},
-}
+    response: {
+        filter: {
+            "status": /^[^45]\d+/,
+            "content.text": (request, text) => !!text && !!text.trim()
+        },
+        content: {
+            removeHostname: true
+        }
+    },
+    output: {
+        defaultExt: "txt",
+        dirPath: 'output',
+        pathLengthLimit: 150
+    },
+    apiInfo: {
+        saved: true,
+        fileName: 'apis.json',
+        filter: /(REST|api)\//
+    }
+ }
 ```
