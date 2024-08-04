@@ -60,6 +60,7 @@ export function verify_path(request) {
         let _file_dir = handle_data.file_dir;
         _file_dir.split("/").reduceRight((acc, cur) => {
             if(acc > options.output.pathLengthLimit) {
+                cur = cur.replace(/[[\\^$.|?*+()]/g, "\\$&");
                 _file_dir = _file_dir.replace(new RegExp(`/${cur}$`), "");
             }
             return _file_dir.length;
@@ -157,7 +158,7 @@ export function contnet_format_handler(params) {
     } catch (error) {
         let _message = error?.message ?? "";
         _message = _message.length < 100 ? _message : `${_message.substring(0, 100)}...`;
-        console.error(`[ERROR]:[FORMAT ERROR]:${harFileName} -- [PATH]: ${file_path} -- MESSAGE: ${_message}`);
+        console.error(`[ERROR]:[FORMAT ERROR]:${harFileName} -- [PATH]: ${file_path} -- [MESSAGE]: ${_message}`);
     }
     return _content_text;
 }
