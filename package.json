@@ -1,6 +1,6 @@
 {
   "name": "gulp-har",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "description": "save all files in har with beautify",
   "repository": {
