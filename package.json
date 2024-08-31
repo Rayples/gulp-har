@@ -9,7 +9,7 @@
   },
   "exports": {
     "require": "./src/lib/common/index.cjs",
-    "import": "./src/lib/ems/index.mjs"
+    "default": "./src/lib/ems/index.mjs"
   },
   "scripts": {
     "test": "gulp"
@@ -21,11 +21,12 @@
   "author": "rayple",
   "license": "MIT",
   "dependencies": {
-    "@prettier/sync": "^0.5.1",
     "gulp": "^4.0.2",
+    "log4js": "^6.9.1",
     "md5": "^2.3.0",
     "mime-db": "^1.52.0",
     "prettier": "^3.2.5",
     "vinyl": "^3.0.0"
   }
 }
+
