@@ -42,12 +42,6 @@ log4js.addLayout("full-fomart", function (config) {
     );
   };
 });
-const myAppenderModule = {
-  configure: (config, layouts, findAppender, levels) => {
-    /* ...your appender config... */
-    console.log(config, layouts, findAppender, levels);
-  },
-};
 
 log4js.configure({
   appenders: {
@@ -68,9 +62,8 @@ log4js.configure({
       flags: "w",
       layout: { type: "full-fomart" }
     },
-    _debug: { type: "logLevelFilter", appender: "custom", level: "debug" },
+    _debug: { type: "logLevelFilter", appender: "app", level: "debug" },
     _error: { type: "logLevelFilter", appender: "console", level: "error" },
-    custom: { type: myAppenderModule }
   },
   categories: {
     default: { appenders: ["_debug", "_error"], level: "debug" },

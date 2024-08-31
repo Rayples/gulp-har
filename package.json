@@ -8,8 +8,8 @@
     "url": "https://github.com/Rayples/gulp-har.git"
   },
   "exports": {
-    "require": "./src/lib/common/index.cjs",
-    "default": "./src/lib/ems/index.mjs"
+    "require": "./src/common/index.cjs",
+    "default": "./src/ems/index.mjs"
   },
   "scripts": {
     "test": "gulp"
