@@ -1,5 +1,5 @@
 {
-  "name": "gulp-har",
+  "name": "gulp-har-dev",
   "version": "1.0.6",
   "type": "module",
   "description": "save all files in har with beautify",
@@ -22,10 +22,11 @@
   "license": "MIT",
   "dependencies": {
     "gulp": "^4.0.2",
-    "log4js": "^6.9.1",
     "md5": "^2.3.0",
     "mime-db": "^1.52.0",
     "prettier": "^3.2.5",
+    "stream-json": "^1.9.1",
+    "url": "^0.11.4",
     "vinyl": "^3.0.0"
   }
 }

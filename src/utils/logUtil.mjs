@@ -1,100 +1,67 @@
-import log4js from "log4js";
-import dateFormat from "date-format";
-import { format as node_util_format } from "util";
+// 导入 events 模块
+import { EventEmitter } from "events";
 
-export class Log4jsContext {
-  _context = new Map();
+// 创建一个 EventEmitter 实例
+// export const LogUtil = new EventEmitter();
 
-  addContext(key, value) {
-    this._context.set(key, value);
-  }
-  getContext(key) {
-    return this._context.get(key);
-  }
-  getContexts() {
-    return this._context;
-  }
-  getContextObj() {
-    return Object.fromEntries(this._context.entries());
-  }
-  removeContext(key) {
-    this._context.delete(key);
-  }
-  clearContext() {
-    this._context.clear();
-  }
-}
+class LogUtils extends EventEmitter {
+  _level = 1;
 
-const log4jsContext = new Log4jsContext();
-
-log4js.addLayout("full-fomart", function (config) {
-  return function (logEvent) {
-    const context = Object.assign({}, log4jsContext.getContextObj(), logEvent.context);
-    const dataStr = node_util_format(...logEvent.data).replace(/\n/g, "");
-    return (
-      node_util_format(
-        "%s [%s] [%s:%s] - ",
-        timestampLevelAndCategory(logEvent),
-        context.fileName ?? "",
-        context.moduleName ?? "",
-        context.funnctionName ?? ""
-      ) + dataStr
-    );
+  static levels = {
+    trace: 0,
+    debug: 1,
+    info: 2,
+    warn: 3,
+    error: 4,
+    fatal: 5,
   };
-});
 
-log4js.configure({
-  appenders: {
-    console: { type: "console" },
-    app: {
-      type: "fileSync",
-      filename: "logger-gulp-har.log",
-      maxLogSize: 5242880,
-      backups: 3,
-      flags: "w",
-      layout: { type: "full-fomart" }
-    },
-    performance: {
-      type: "fileSync",
-      filename: "performance-gulp-har.log",
-      maxLogSize: 5242880,
-      backups: 3,
-      flags: "w",
-      layout: { type: "full-fomart" }
-    },
-    _debug: { type: "logLevelFilter", appender: "app", level: "debug" },
-    _error: { type: "logLevelFilter", appender: "console", level: "error" },
-  },
-  categories: {
-    default: { appenders: ["_debug", "_error"], level: "debug" },
-    performance: { appenders: ["performance"], level: "trace" }
+  constructor() {
+    super();
+    this._record();
   }
-});
 
-export function getLogger(appender, options = {}) {
-  let _log = log4js.getLogger(appender);
-  Object.entries((options.context ??= {})).forEach(([key, value]) => {
-    _log.addContext(key, value);
-  });
-  return _log;
+  error(message) {
+    this.log("error", message);
+  }
+
+  log(type, message) {
+    if (this._level <= LogUtils.levels[type]) {
+      this.emit("log", { type: type, message: message });
+    }
+  }
+
+  warn(message) {
+    this.log("warn", message);
+  }
+
+  info(message) {
+    this.log("info", message);
+  }
+
+  debug(message) {
+    this.log("debug", message);
+  }
+
+  trace(message) {
+    this.log("trace", message);
+  }
+
+  fatal(message) {
+    this.log("fatal", message);
+  }
+
+  _record() {
+    super.on("log", (event) => {
+      let { type,  message: { har_name, feature_name, ...others }} = event;
+      console.log(`${Date.now()} [${type.toLocaleUpperCase()}] [${har_name}] [${feature_name}] ${JSON.stringify(others)}`);
+    });
+  }
+
+  level(level) {
+    this._level = LogUtils.levels[level] || 2;
+  }
 }
 
-export default {
-  get log4js() {
-    return log4js;
-  },
-  get context() {
-    return log4jsContext;
-  }
-};
-
-// copy from log4js\lib\layouts.js
-function timestampLevelAndCategory(logEvent) {
-  return node_util_format(
-    "[%s] [%s] %s -",
-    dateFormat.asString(logEvent.startTime),
-    logEvent.level.toString(),
-    logEvent.categoryName
-  );
-}
+export const LogUtil = new LogUtils();
 

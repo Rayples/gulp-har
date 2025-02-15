@@ -1,114 +1,100 @@
 import through from "through2";
+import { Readable } from "stream";
+import vinyl_File from "vinyl";
+import { join as node_path_join } from "path";
 import { merge_options } from "../utils/parse_options.mjs";
-import LogUtil, { getLogger } from "../utils/logUtil.mjs";
-import event from "../events/index.mjs";
-import * as utils from "../utils/index.mjs";
+import stream_json from "stream-json";
+import Pick from "stream-json/filters/Pick.js";
+import StreamArray from "stream-json/streamers/StreamArray.js";
+import { BuildRequest } from "../utils/BuildRequest.mjs";
+import { ParsePath } from "../utils/ParsePath.mjs";
+import { VerifyPath } from "../utils/VerifyPath.mjs";
+import { FilterPath } from "../utils/FilterPath.mjs";
+import { FilterApiRequest } from "../utils/FilterApiRequest.mjs";
+import { PrettierFormat } from "../utils/PrettierFormat.mjs";
+import { BuildVinylFile } from "../utils/BuildVinylFile.mjs";
+import { BuildOptions } from "../utils/BuildOptions.mjs";
 
-const module_name = "ems/index.mjs";
-const log = getLogger("main", { context: { moduleName: module_name } });
+
 
 export default (options) => {
-  return through
-    .obj(function (file, enc, next) {
-      LogUtil.context.addContext("fileName", file.basename);
-      if (file.isNull()) {
-        log.debug(`File is null: ${file.path}`);
-        next(null, file);
-        return;
-      }
+  return through.obj(function (file, enc, next) {
+    if (file.isNull()) {
+      next(null, file);
+      return;
+    }
 
-      let _contents = file.contents;
-      if (Buffer.isBuffer(_contents)) {
-        _contents = _contents.toString();
-      }
+    let _this = this;
 
-      try {
-        if (typeof _contents === "string") {
-          _contents = JSON.parse(_contents);
-        }
-      } catch (e) {
-        log.debug(`File is null: ${file.path}`);
-        next(null, file);
-        return;
-      }
+    let _contents = file.contents;
 
-      const _cur_file = {
+    if (Buffer.isBuffer(_contents)) {
+      _contents = Readable.from(_contents);
+    }
+
+    BuildOptions.make().parseOptions(options);
+
+    let _options = merge_options(_default_options, options);
+    _options = Object.assign(_options, {
+      cur_file: {
         name: file.basename,
         cwd: file.cwd,
         base: file.base,
-        path: file.path
-      };
-
-      let _options = merge_options(options);
-      const _entries = _contents?.log?.entries;
-      let accrued_info = {
-        cur_file: _cur_file,
-        accrued_urls: [],
-        accrued_object: {}
-      };
-      const listener = handler_finish_listener(accrued_info, _entries.length, () => {
-        event.off("handler_finish", listener);
-        next();
-      });
-      event.on("handler_finish", listener);
-
-      event.on("push_file", (save_file) => {
-        this.push(save_file);
-      });
-      _entries.forEach((entrie) => {
-        const request = {
-          cur_file: _cur_file,
-          entrie,
-          options: _options,
-          handle_data: {
-            url_path: null,
-            file_path: null,
-            file_dir: null,
-            file_name: null,
-            file_ext: null,
-            file_full_name: null,
-            saveToApi: false,
-            apiInfo: {}
-          },
-          passed: false
-        };
-        event.emit("parse_path", request);
-      });
-
-      if (accrued_info.accrued_urls.length === _entries.length && _options.apiInfo.saved === true) {
-        console.log("ssasas");
+        path: file.path,
+      },
+      accrued_info: {
+        accrued_object: {},
       }
     })
-    .on("finish", () => {
-      event.removeAllListeners();
-      LogUtil.log4js.shutdown();
-      LogUtil.context.clearContext();
-    });
-};
 
-function handler_finish_listener(accrued_info, requestOfEntriesLength, callback) {
-  let { cur_file: _cur_file, accrued_urls: _accrued_urls, accrued_object: _accrued_object } = accrued_info;
-  return (request) => {
-    const { handle_data, options, cur_file } = request;
-    if (_cur_file.name != cur_file.name) {
-      log.error(` ΘöÖΦ»»τÜäΣ║ïΣ╗╢τ¢æσÉ¼∩╝îµ¡ñµ¼íσñäτÉåσ░åσ┐╜τòÑ: ${_cur_file.name} != ${cur_file.name}`);
-      return;
-    }
-    _accrued_urls.push(handle_data.url_path);
-    if (request.passed) {
-      log.debug(`[request handle result]: passed`, {
-        file_path: handle_data.file_path
+    const pipeline = _contents
+      .pipe(stream_json.parser())
+      .pipe(Pick.make({ filter: "log.entries" }))
+      .pipe(StreamArray.make())
+      .pipe(BuildRequest.make(_options))
+      .pipe(ParsePath.make(_options))
+      .pipe(VerifyPath.make(_options))
+      .pipe(FilterPath.make(_options))
+      // .pipe(FilterApiRequest.make())
+      .pipe(PrettierFormat.make(_options))
+      .pipe(BuildVinylFile.make(_options))
+
+    pipeline.on("data", (newFile) => {
+      _this.push(newFile);
+    });
+
+    pipeline.on("end", () => {
+      // saveToApi(_options);
+      next(null);
+    });
+
+    pipeline.on('error', (err) => {
+      console.error(err.message);
+    });
+
+    function saveToApi(options) {
+      let { cur_file, apiInfo, accrued_object } = options;
+      let _accrued_list = Object.values(accrued_object).flatMap((list) => list);
+      let _apis_info = _accrued_list
+        .filter((handle_data) => handle_data.saveToApi)
+        .reduce((acc, handle_data) => {
+          if (!acc[handle_data.url_path]) {
+            acc[handle_data.url_path] = {
+              url: handle_data.url_path,
+              ...handle_data.apiInfo,
+            };
+          }
+          acc[handle_data.url_path][`path${/(_\d+)?$/.exec(handle_data.file_name)[0]}`] = handle_data.file_path;
+          return acc;
+        }, {});
+      const _api_file = new vinyl_File({
+        cwd: cur_file.cwd,
+        base: cur_file.base,
+        path: node_path_join(cur_file.path, apiInfo.fileName),
+        contents: Buffer.from(JSON.stringify(Object.values(_apis_info), null, 4)),
       });
-      event.emit("accrued_request", _accrued_object, request);
-    } else {
-      log.error(`[request handle result]: failed`, {
-        file_path: handle_data.file_path
-      });
+      _this.push(_api_file);
     }
-    if (_accrued_urls.length === requestOfEntriesLength && options.apiInfo.saved === true) {
-      event.emit("save_api", _accrued_object, cur_file, options);
-      callback();
-    }
-  };
-}
+  });
+};
 
